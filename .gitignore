@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/src/User.jsx
+/src/Users.jsx
 /.pnp
 .pnp.js
 
