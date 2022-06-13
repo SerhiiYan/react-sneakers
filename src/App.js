@@ -20,10 +20,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   
   async function onAddToCart(item) {
-    let existCard = cartItems.find(cartItem => cartItem.refId === item.id)
+    let existCard = cartItems.find(cartItem => cartItem.refId == item.id)
     if(existCard) {
       await axios.delete(`https://629489d4a7203b3ed06b09a5.mockapi.io/cart/${existCard.id}`)
-      setCartItems(cartItems.filter(cartItem => cartItem.refId !== item.id))
+      setCartItems(cartItems.filter(cartItem => cartItem.refId != item.id))
       } else {
         let {id, ...requestData} = item
         requestData = {refId: id, ...requestData}
@@ -35,9 +35,9 @@ function App() {
 
   async function onAddToFavorites(item) {
     try {
-      if(favorites.find(favorite => favorite.id === item.id)) {
+      if(favorites.find(favorite => favorite.id == item.id)) {
         axios.delete(`https://629489d4a7203b3ed06b09a5.mockapi.io/favorites/${item.id}`)
-        setFavorites(favorites => favorites.filter(favorite => favorite.id !== item.id))
+        setFavorites(favorites => favorites.filter(favorite => favorite.id != item.id))
       } else {
         const {data} = await axios.post("https://629489d4a7203b3ed06b09a5.mockapi.io/favorites", item)
         setFavorites([...favorites, data])
@@ -54,7 +54,7 @@ function App() {
   }
 
   function hasCartItem(id) {
-    return cartItems.some(item => item.refId === id)
+    return cartItems.some(item => item.refId == id)
   }
 
   useEffect(() => {
