@@ -1,139 +1,112 @@
+import React, { useEffect, useState, createContext} from 'react'
 import './App.scss'
-import Users from './Users';
+import { Route, Routes } from 'react-router-dom'
+import Drawer from './components/Drawer/Drawer'
+import Header from './components/Header'
+import axios from 'axios'
+import Home from './pages/Home'
+import Favorites from './pages/Favorites'
+import Orders from './pages/Orders'
+
+export const AppContext = createContext({})
 
 function App() {
 
+  const [items, setItems] = useState([])
+  const [cartItems, setCartItems] = useState([])
+  const [favorites, setFavorites] = useState([])
+  const [searchValue, setSearchValue] = useState('')
+  const [cartOpen, setCartOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  
+  async function onAddToCart(item) {
+    let existCard = cartItems.find(cartItem => cartItem.refId === item.id)
+    if(existCard) {
+      await axios.delete(`https://629489d4a7203b3ed06b09a5.mockapi.io/cart/${existCard.id}`)
+      setCartItems(cartItems.filter(cartItem => cartItem.refId !== item.id))
+      } else {
+        let {id, ...requestData} = item
+        requestData = {refId: id, ...requestData}
+        const {data} = await axios.post("https://629489d4a7203b3ed06b09a5.mockapi.io/cart", requestData)
+        setCartItems([...cartItems, data])
+      }
+    }
+
+
+  async function onAddToFavorites(item) {
+    try {
+      if(favorites.find(favorite => favorite.id === item.id)) {
+        axios.delete(`https://629489d4a7203b3ed06b09a5.mockapi.io/favorites/${item.id}`)
+        setFavorites(favorites => favorites.filter(favorite => favorite.id !== item.id))
+      } else {
+        const {data} = await axios.post("https://629489d4a7203b3ed06b09a5.mockapi.io/favorites", item)
+        setFavorites([...favorites, data])
+      }
+    } catch (error) {
+      console.log('error onAddToFavorites');
+    }
+  }
+
+  function onRemoveItem(id) {
+
+    axios.delete(`https://629489d4a7203b3ed06b09a5.mockapi.io/cart/${id}`)
+    setCartItems(cartItems => cartItems.filter(cartItem => cartItem.id != id))
+  }
+
+  function hasCartItem(id) {
+    return cartItems.some(item => item.refId === id)
+  }
+
+  useEffect(() => {
+    
+    async function fetchData() {
+      try {
+        setIsLoading(true)
+          const [cartResponse, favoritesResponse, itemsResponse] = await Promise.all([
+          axios.get("https://629489d4a7203b3ed06b09a5.mockapi.io/cart"),
+          axios.get("https://629489d4a7203b3ed06b09a5.mockapi.io/favorites"),
+          axios.get("https://629489d4a7203b3ed06b09a5.mockapi.io/items")
+        ])
+        setCartItems(cartResponse.data)
+        setFavorites(favoritesResponse.data)
+        setItems(itemsResponse.data)
+      } catch (error) {
+        console.log('error fetchData');
+      }
+      setIsLoading(false)
+    }
+    fetchData()
+  }, [])
 
   return (
-    <div className="wrapper clear">
+    <AppContext.Provider value={{items, cartItems, favorites, onAddToFavorites, onAddToCart, setCartItems, setCartOpen, hasCartItem}}>
 
-      <div style={{display: 'none'}} className="overlay">
-        <div className="drawer">
-          <h2 className='d-flex justify-between mb-30'>Cart
-            <img className='cu-p' src="/img/btn-remove.svg" alt="btn remove" />
-          </h2>
-          <div className="items">
-            <div className="cartItem d-flex align-center mb-20">
-              <img className='mr-20' width={70} height={70} src="/img/sneakers/img1.jpg" alt="sneakers" />
-              <div className='mr-20'>
-                <p className='mb-5'>Men's Sneakers Nike Blazer Mid Suede</p>
-                <b>69 $</b>
-              </div>
-              <img className='removeBtn' src="/img/btn-remove.svg" alt="btn remove" />
-            </div>
-            <div className="cartItem d-flex align-center mb-20">
-              <img className='mr-20' width={70} height={70} src="/img/sneakers/img1.jpg" alt="sneakers" />
-              <div className='mr-20'>
-                <p className='mb-5'>Men's Sneakers Nike Blazer Mid Suede</p>
-                <b>69 $</b>
-              </div>
-              <img className='removeBtn' src="/img/btn-remove.svg" alt="btn remove" />
-            </div>
-          </div>
-          <div className="cartTotalBlock">
-            <ul>
-              <li>
-                <span>Total:</span>
-                <div></div>
-                <b>69 $</b>
-              </li>
-              <li>
-                <span>Tax 5%:</span>
-                <div></div>
-                <b>4.56 $</b>
-              </li>
-            </ul>
-            <button className='greenButton'>Make a purchase <img src="/img/arrow.svg" alt="arrow" /></button>
-          </div>
-        </div>
+      <div className="wrapper clear">
+        <Drawer onRemoveItem={onRemoveItem} opened={cartOpen}/>
+        <Header onClickCart={() => setCartOpen(true)} />
+        <Routes>
+          <Route path='/' element={
+            <Home 
+              items={items} 
+              cartItems={cartItems}
+              searchValue={searchValue} 
+              setSearchValue={setSearchValue} 
+              onAddToCart={onAddToCart}
+              onAddToFavorites={onAddToFavorites}
+              isLoading={isLoading}
+          />}
+            />
+          <Route 
+            path='favorites' 
+            element={<Favorites  onAddToFavorites={onAddToFavorites}/>}
+          />
+          <Route 
+            path='orders' 
+            element={<Orders />}
+          />
+          </Routes>
       </div>
-
-      <header className="d-flex justify-between align-center p-40">
-        <div className="d-flex align-center">
-          <img width={40} height={40} src="/img/logo.png" alt="sneakers" />
-          <div>
-            <h3 className="text-uppercase">React Sneakers</h3>
-            <p className="opacity-5">Shop with the best sneakers</p>
-          </div>
-        </div>
-        <ul className="d-flex">
-            <li className="mr-30">
-              <img width={18} height={18} src="/img/cart.svg" alt="cart" />
-              <span>39 $</span>
-            </li>
-            <li>
-              <img width={18} height={18} src="/img/user.svg" alt="user" />
-            </li>
-          </ul>
-      </header>
-      <div className="content p-40">
-        <div className="d-flex align-center justify-between mb-40">
-          <h1>All sneakers</h1>
-          <div className="search-block d-flex">
-            <img src="/img/search.svg" alt="search" />
-            <input placeholder="Search..." />
-          </div>
-        </div>
-
-        <div className="d-flex justify-around">
-          <div className="card">
-            <div className="favorite">
-              <img src="/img/heart-unliked.svg" alt="Unliked" />
-            </div>
-            <img width={133} height={112} src="/img/sneakers/img1.jpg" alt="sneakers" />
-            <h5>Men's Sneakers Nike Blazer Mid Suede</h5>
-            <div className="d-flex justify-between align-center">
-              <div className="d-flex flex-column">
-                <span>Price: </span>
-                <b>69 $</b>
-              </div>
-              <button className="button">
-                <img width={11} height={11} src="/img/plus.svg" alt="plus" />
-              </button>
-            </div>
-          </div>
-          <div className="card">
-            <img width={133} height={112} src="/img/sneakers/img2.jpg" alt="sneakers" />
-            <h5>Men's Sneakers Nike Blazer Mid Suede</h5>
-            <div className="d-flex justify-between align-center">
-              <div className="d-flex flex-column">
-                <span>Price: </span>
-                <b>69 $</b>
-              </div>
-              <button className="button">
-                <img width={11} height={11} src="/img/plus.svg" alt="plus" />
-              </button>
-            </div>
-          </div>
-          <div className="card">
-            <img width={133} height={112} src="/img/sneakers/img3.jpg" alt="sneakers" />
-            <h5>Men's Sneakers Nike Blazer Mid Suede</h5>
-            <div className="d-flex justify-between align-center">
-              <div className="d-flex flex-column">
-                <span>Price: </span>
-                <b>69 $</b>
-              </div>
-              <button className="button">
-                <img width={11} height={11} src="/img/plus.svg" alt="plus" />
-              </button>
-            </div>
-          </div>
-          <div className="card">
-            <img width={133} height={112} src="/img/sneakers/img4.jpg" alt="sneakers" />
-            <h5>Men's Sneakers Nike Blazer Mid Suede</h5>
-            <div className="d-flex justify-between align-center">
-              <div className="d-flex flex-column">
-                <span>Price: </span>
-                <b>69 $</b>
-              </div>
-              <button className="button">
-                <img width={11} height={11} src="/img/plus.svg" alt="plus" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </AppContext.Provider>
   );
 }
 
